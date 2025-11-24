@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lost in the Scroll: The Student's Digital Dilemma</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the DARK ROYAL BLUE theme */
+        :root {
+            --bg-dark: #0f172a; /* Deep Navy (Slate-950) */
+            --bg-component: #1e293b; /* Slate-800 */
+            --text-light: #e5e7eb; /* Light Gray */
+            --accent-royal-blue: #6366f1; /* Indigo-500 for primary contrast */
+            --accent-hover: #4f46e5; /* Indigo-600 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            transition: background-color 0.3s;
+        }
+        /* Custom scrollbar for aesthetics */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Navigation link active state */
+        .nav-link.active {
+            border-bottom: 3px solid var(--accent-royal-blue);
+            color: var(--accent-royal-blue);
+            font-weight: 600;
+        }
+        /* Essay heading styling */
+        .article-content h2 {
+            color: var(--text-light);
+            border-bottom: 2px solid #334155;
+            padding-bottom: 8px;
+            margin-top: 2.5rem;
+            font-size: 1.75rem; /* text-3xl */
+            font-weight: 600; /* semibold */
+        }
+        /* Callout box styling */
+        .callout {
+            border-left: 4px solid var(--accent-royal-blue);
+            background-color: #1f2937; /* Darker Slate */
+            color: var(--text-light);
+        }
+        /* Figure placeholder styling (Adjusted for better visibility) */
+        .fig-placeholder {
+            min-height: 200px;
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: var(--text-light);
+        }
+        #adModal { z-index: 50; }
+        .hidden-page { display: none; }
+        
+        /* Royal Blue Button Style */
+        .interactive-btn {
+            background-color: var(--accent-royal-blue);
+            color: var(--bg-dark); 
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px -3px rgba(99, 102, 241, 0.4);
+        }
+        .interactive-btn:hover {
+            background-color: var(--accent-hover); 
+            box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.6);
+        }
+        .major-title {
+            color: var(--accent-royal-blue);
+        }
+
+        /* Quiz Result Styling */
+        .quiz-result-pass {
+            background-color: #104e4e; /* Dark teal */
+            border-color: #00ffff;
+            color: #00ffff; 
+        }
+        .quiz-result-fail {
+            background-color: #4a1a1a; /* Dark red */
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .quiz-result-info {
+            background-color: #272733; /* Darker slate */
+            border-color: #a5b4fc;
+            color: #a5b4fc; 
+        }
+
+        /* Focus Timer Pulse Animation */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
+            50% { transform: scale(1.01); box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+        }
+        .timer-pulse {
+            animation: pulse 2s infinite ease-in-out;
+            box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+        }
+    </style>
+    <script>
+        let timerInterval;
+
+        // --- Page Navigation Logic ---
+        function showPage(pageId) {
+            // Stop the timer if navigating away from the home page
+            if (pageId !== 'home-page') {
+                stopTimer();
+            }
+
+            // Hide all pages
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.add('hidden-page');
+            });
+            // Show the requested page
+            const activePage = document.getElementById(pageId);
+            if (activePage) {
+                activePage.classList.remove('hidden-page');
+            }
+
+            // Update active navigation link styling
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            const activeLink = document.querySelector(`.nav-link[data-page="${pageId}"]`);
+            if (activeLink) {
+                 activeLink.classList.add('active');
+            }
+           
+            window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top on page switch
+            
+            // If returning to the home page, restart the timer
+            if (pageId === 'home-page') {
+                startTimer();
+            }
+        }
+
+        // --- Pop-up/Modal Logic ---
+        function showModal() {
+            // Only show modal if the user is on the home page and the timer is running
+            if (document.getElementById('home-page').classList.contains('hidden-page') === false) {
+                 document.getElementById('adModal').classList.remove('hidden');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('adModal').classList.add('hidden');
+        }
+
+        // --- Focus Timer Logic ---
+        function startTimer() {
+            stopTimer(); // Clear any existing timer
+            let timeLeft = 40; // 40 seconds initial time
+            const timerElement = document.getElementById('focusTimer');
+            const timerContainer = document.getElementById('timerContainer');
+            
+            if (timerElement) {
+                timerElement.textContent = `${timeLeft}s`;
+                timerContainer.classList.add('timer-pulse');
+                timerContainer.classList.remove('bg-red-900', 'border-red-400', 'text-red-500');
+                timerContainer.classList.add('bg-slate-900', 'border-indigo-400', 'text-indigo-400');
+            }
+
+            timerInterval = setInterval(() => {
+                timeLeft -= 1;
+                if (timerElement) {
+                    timerElement.textContent = `${timeLeft}s`;
+                }
+
+                if (timeLeft <= 0) {
+                    stopTimer();
+                    if (timerElement) {
+                        timerElement.textContent = 'DISTRACTED!';
+                        timerContainer.classList.remove('timer-pulse', 'bg-slate-900', 'border-indigo-400', 'text-indigo-400');
+                        timerContainer.classList.add('bg-red-900', 'border-red-400', 'text-red-500');
+                    }
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            const timerContainer = document.getElementById('timerContainer');
+            if (timerContainer) {
+                // Reset styling
+                timerContainer.classList.remove('timer-pulse');
+            }
+        }
+
+
+        // --- Quiz Logic ---
+        
+        // Post-Test Answers (Based on Essay Content)
+        const postTestAnswers = {
+            q1: 'b', // The constant choice between their private life and their student self.
+            q2: 'c', // Digital Dissonance
+            q3: 'b'  // Mindfulness-based mobile apps.
+        };
+
+        // Pre-Test Logic (Simple self-assessment score)
+        function checkPreQuiz() {
+            let score = 0;
+            const form = document.getElementById('preQuizForm');
+            const resultsDiv = document.getElementById('pre-quiz-results');
+
+            // Q1: Frequency of distraction (1=1, 2=2, 3=3)
+            const q1Value = parseInt(form.elements['pq1'].value);
+            score += q1Value || 0;
+            
+            // Q2: Last thing checked (a=1, b=3, c=2)
+            const q2Map = { 'a': 1, 'b': 3, 'c': 2 };
+            const q2Value = q2Map[form.elements['pq2'].value] || 0;
+            score += q2Value;
+
+            // Q3: Difficulty focusing (1=1, 3=3, 2=2)
+            const q3Map = { '1': 1, '3': 3, '2': 2 }; // Fixed values to match HTML
+            const q3Value = q3Map[form.elements['pq3'].value] || 0;
+            score += q3Value;
+
+            // Total possible score: 9. Lowest: 3.
+            
+            resultsDiv.classList.remove('hidden'); // Ensure results are visible
+            resultsDiv.className = 'p-6 mt-6 rounded-lg font-bold border-2 text-center quiz-result-info'; // Base classes
+
+            let resultText = '';
+            let nextAction = 'Ready to dive in?';
+
+            // HTML tags used for bolding instead of Markdown **
+            if (score <= 4) {
+                resultText = `<b>[LOW AWARENESS]</b> Score: ${score}/9. You are highly susceptible to distraction and may be unaware of the depth of the digital dilemma.`;
+            } else if (score <= 7) {
+                resultText = `<b>[MODERATE AWARENESS]</b> Score: ${score}/9. You are aware of distraction but often struggle to maintain focus.`;
+            } else {
+                resultText = `<b>[HIGH AWARENESS]</b> Score: ${score}/9. You have a strong perception of your attention habits, but external pressures may still affect your performance.`;
+            }
+
+            resultsDiv.innerHTML = `${resultText}<div class="mt-4"><button class="interactive-btn font-bold py-2 px-4 rounded-lg" onclick="showPage('essay-page')">${nextAction} Continue to the Essay →</button></div>`;
+        }
+
+
+        function checkPostQuiz() {
+            let score = 0;
+            const form = document.getElementById('postQuizForm');
+            const resultsDiv = document.getElementById('post-quiz-results');
+
+            // Check each question
+            for (let q in postTestAnswers) {
+                const selected = form.elements[q].value;
+                if (selected === postTestAnswers[q]) {
+                    score++;
+                }
+            }
+
+            const totalQuestions = Object.keys(postTestAnswers).length;
+            const passingScore = 3; 
+            
+            resultsDiv.classList.remove('hidden');
+            resultsDiv.classList.remove('quiz-result-pass', 'quiz-result-fail', 'quiz-result-info'); // Reset existing classes
+            resultsDiv.className = 'p-6 mt-6 rounded-lg font-bold border-2 text-center'; // Base classes
+
+            if (score >= passingScore) {
+                resultsDiv.classList.add('quiz-result-pass');
+                resultsDiv.innerHTML = `[SUCCESS] CONGRATULATIONS! 🎉 You scored ${score} out of ${totalQuestions}. You clearly grasped the core concepts of the Social Scroll.`;
+            } else {
+                resultsDiv.classList.add('quiz-result-fail');
+                resultsDiv.innerHTML = `[FAILURE] OOPS! 😟 You scored ${score} out of ${totalQuestions}. The passing score is ${passingScore}. Please re-read the Essay section above and try again to fully understand the digital dilemma.`;
+            }
+        }
+
+        // --- Initialization ---
+        window.onload = function() {
+            // Set the Home page as active initially
+            showPage('home-page'); 
+            
+            // Show the pop-up after a delay for engagement
+            setTimeout(showModal, 4000); 
+        }
+    </script>
+</head>
+<body class="min-h-screen">
+
+    <div id="adModal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center p-4 hidden">
+        <div class="bg-slate-800 border-2 rounded-xl shadow-2xl p-8 max-w-sm w-full transform transition-transform duration-300 scale-100" style="border-color: var(--accent-royal-blue);">
+            <button class="float-right text-gray-400 hover:text-white text-3xl font-bold leading-none -mt-4" onclick="closeModal()">&times;</button>
+            <h3 class="text-3xl font-extrabold text-white mb-3">⚠️ ATTENTION REQUIRED ⚠️</h3>
+            <p class="text-gray-300 mb-6">A new notification just popped up! This is a simulated interruption did you get pulled away? Test your focus with the pre-awareness quiz now.</p>
+            <button class="w-full interactive-btn font-bold py-3 rounded-lg shadow-md hover:shadow-lg" onclick="closeModal(); showPage('pre-quiz-page');">Address the Notification (Go to Pre-Test)</button>
+        </div>
+    </div>
+
+    <nav class="sticky top-0 bg-slate-900/95 backdrop-blur-sm shadow-lg z-40 border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <span class="text-2xl font-bold text-indigo-400 tracking-wider">LOST IN THE SCROLL</span>
+                    </div>
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                        <a href="#" onclick="showPage('home-page')" class="nav-link text-gray-300 hover:text-indigo-400 px-3 py-5 text-sm font-medium transition duration-150" data-page="home-page">Home (The Dilemma)</a>
+                        <a href="#" onclick="showPage('pre-quiz-page')" class="nav-link text-gray-300 hover:text-indigo-400 px-3 py-5 text-sm font-medium transition duration-150" data-page="pre-quiz-page">Pre-Test (Awareness)</a>
+                        <a href="#" onclick="showPage('essay-page')" class="nav-link text-gray-300 hover:text-indigo-400 px-3 py-5 text-sm font-medium transition duration-150" data-page="essay-page">Essay (Deep Dive)</a>
+                        <a href="#" onclick="showPage('post-quiz-page')" class="nav-link text-gray-300 hover:text-indigo-400 px-3 py-5 text-sm font-medium transition duration-150" data-page="post-quiz-page">Post-Test (Comprehension)</a>
+                        <a href="#" onclick="showPage('credits-page')" class="nav-link text-gray-300 hover:text-indigo-400 px-3 py-5 text-sm font-medium transition duration-150" data-page="credits-page">Credits</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-3xl mx-auto px-4 py-12">
+
+        <section id="home-page" class="page-content space-y-8">
+            <header class="text-center">
+                <h1 class="text-5xl font-extrabold text-indigo-400 mb-4 leading-tight major-title sm:text-6xl">Lost in the Scroll: A Student's Digital Dilemma</h1>
+                <p class="text-xl text-indigo-300 font-medium sm:text-2xl">An Interactive Exploration of Social Media's True Cost.</p>
+                <div class="h-1 bg-indigo-500 w-24 mx-auto my-6 rounded-full"></div>
+            </header>
+
+            <div class="bg-slate-800 p-8 rounded-xl shadow-lg border border-slate-700">
+                <h2 class="text-2xl font-semibold text-white mb-4">Whats Going On in Social Media Core?</h2>
+                <p class="text-lg italic text-gray-300 leading-relaxed">Social media has become more than just an app; it’s something built into students’ daily lives that affects how they think, focus, and see themselves. While it connects people and allows creativity, it also drains attention, motivation, and mental health, creating pressure and distraction in both academic and personal life.</p>
+            </div>
+            
+            <div class="pt-8 article-content space-y-4">
+                <h2 class="text-2xl font-semibold border-0 text-white border-b-2 border-slate-700 pb-2">The Attention Countdown</h2>
+                
+                <div id="timerContainer" class="bg-slate-900 border-2 border-indigo-400 text-indigo-400 p-6 rounded-xl text-center shadow-lg my-6 mx-auto w-full md:w-3/4 transition duration-500">
+                    <p class="text-sm uppercase tracking-widest text-gray-400 mb-2">Average Attention Span Remaining:</p>
+                    <div class="text-6xl font-extrabold" id="focusTimer">40s</div>
+                    <p class="text-sm text-gray-500 mt-2">See how long you can read this paragraph before checking your phone.</p>
+                </div>
+                <p class="text-gray-300">Social media has evolved into something far beyond a mere application; it's intricately woven into our daily existence. It doesn't just consume hours; it aggressively steals *attention*. The continuous pressure to post, check, and respond creates an exhausting internal conflict.</p>
+                <p class="text-gray-300">The central issue is not simple screen time. It is the platform design that forces students to constantly mediate between their private self and their student self a draining conflict. This results in an invisible weight that students often fail to recognize until it severely impacts their lives.</p>
+
+                <div class="callout p-4 rounded-lg mt-6 text-gray-200">
+                    <p class="font-bold mb-2 text-indigo-300">The Digital Conflict:</p>
+                    <p>The more students use social media, the more they feel the need to be idealized, to present a perfect, curated life online. This chase for an impossible standard leads to constant feelings of judgment and inadequacy.</p>
+                </div>
+                
+                <h3 class="text-xl font-semibold text-gray-100 pt-6">Visualizing the Hook: Why We Can't Look Away</h3>
+                <div class="relative pb-[56.25%] mb-4 group" style="max-width: 100%;">
+  <!-- YouTube Video Thumbnail -->
+  <img
+    src="https://img.youtube.com/vi/4TMPXK9tw5U/hqdefault.jpg"
+    alt="Digital Addiction and Attention Span - Video Cover"
+    class="absolute top-0 left-0 w-full h-full rounded-lg shadow-xl object-cover"
+    style="border-radius: 0.5rem;"
+  />
+  <!-- Play Button Overlay -->
+  <a
+    href="https://www.youtube.com/watch?v=4TMPXK9tw5U"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="absolute inset-0 flex items-center justify-center"
+    title="Watch on YouTube"
+    style="border-radius: 0.5rem;"
+  >
+    <svg height="80" width="80" viewBox="0 0 100 100" class="transition-transform duration-150 group-hover:scale-110">
+      <circle cx="50" cy="50" r="48" fill="#6366f1" opacity="0.85"/>
+      <polygon points="40,32 40,68 72,50" fill="white"/>
+    </svg>
+  </a>
+</div>
+                <p class="text-sm text-gray-400 italic">The Battle for Your Time: Exposing the Costs of Social Media | Dino Ambrosi | TEDxLagunaBlancaSchool</p>
+                <button class="interactive-btn font-bold py-2 px-4 rounded-lg mt-4" onclick="showPage('pre-quiz-page')">Start the Pre-Test →</button>
+            </div>
+        </section>
+
+        
+        <section id="pre-quiz-page" class="page-content hidden-page space-y-8">
+            <h1 class="text-4xl font-extrabold text-indigo-400 mb-6 border-b-2 border-slate-700 pb-3 major-title sm:text-5xl">Pre-Test: Digital Awareness Level</h1>
+            <p class="text-lg text-gray-300">Before reading the essay, answer these questions honestly to assess your current attention habits. This is a self-assessment, not a knowledge test.</p>
+            
+            <div class="bg-slate-800 p-8 rounded-xl shadow-lg border border-slate-700">
+                <form id="preQuizForm" class="space-y-6">
+                    <div class="p-4 border border-slate-700 rounded-lg bg-slate-900 hover:border-indigo-400 transition duration-200">
+                        <p class="font-semibold text-white mb-2">1. When studying, how often do you reach for your phone to check a non-essential app (like social media)?</p>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="pq1" value="1" class="mr-2 accent-indigo-500"> A) Rarely (once every hour or less)</label>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="pq1" value="2" class="mr-2 accent-indigo-500"> B) Sometimes (2-5 times per hour)</label>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="pq1" value="3" class="mr-2 accent-indigo-500"> C) Constantly (more than 5 times per hour)</label>
+                    </div>
+
+                    <div class="p-4 border border-slate-700 rounded-lg bg-slate-900 hover:border-indigo-400 transition duration-200">
+                        <p class="font-semibold text-white mb-2">2. What was the last thing you checked or opened on your phone?</p>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="pq2" value="a" class="mr-2 accent-indigo-500"> A) A reminder or academic calendar.</label>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="pq2" value="b" class="mr-2 accent-indigo-500"> B) A social media feed (TikTok, Instagram, X).</label>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="pq2" value="c" class="mr-2 accent-indigo-500"> C) A messaging app (WhatsApp, iMessage).</label>
+                    </div>
+
+                    <div class="p-4 border border-slate-700 rounded-lg bg-slate-900 hover:border-indigo-400 transition duration-200">
+                        <p class="font-semibold text-white mb-2">3. How often do you feel like you are mentally "scrolling" or searching for stimulation, even when your phone is put away?</p>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="pq3" value="1" class="mr-2 accent-indigo-500"> A) Never/Rarely.</label>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="pq3" value="3" class="mr-2 accent-indigo-500"> B) Frequently, especially when bored or alone.</label>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="pq3" value="2" class="mr-2 accent-indigo-500"> C) Sometimes, but I can quickly refocus.</label>
+                    </div>
+
+                    <button type="button" class="interactive-btn font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg w-full" onclick="checkPreQuiz()">Submit Pre-Test</button>
+                </form>
+
+                <div id="pre-quiz-results" class="hidden"></div>
+            </div>
+        </section>
+
+
+        <section id="essay-page" class="page-content hidden-page space-y-4">
+            <h1 class="text-4xl font-extrabold text-indigo-400 mb-6 border-b-2 border-slate-700 pb-3 major-title sm:text-5xl">The Full Essay: Lost in the Scroll</h1>
+            <div class="article-content text-lg text-gray-300 space-y-6">
+
+                <p>Social media has evolved to something beyond an app; it’s been built into our lives. It affects how students think, how they focus, and even how they see themselves. At first, platforms like Instagram and TikTok seemed amazing; they let people connect globally and show creativity in ways that were impossible before. But over time, it became clear that social media drains energy, focus, and motivation from students. It doesn’t just take away time; it takes away attention. The constant need to post, check, and reply turns into pressure. It hurts students’ mental health, shatters their focus on school, and disconnects them from what’s actually happening around them.</p>
+                
+                <h2 class="text-3xl">The Impossible Ideal and Mental Health Pressure</h2>
+                <p>The problem isn’t screen time; it's the fact that social media forces students to constantly choose between their private life and their student self, an exhausting conflict to live in every day. It’s like carrying an invisible weight, one that students don’t even realize is there until it’s too late. The more students use social media, the more they feel the need to be idealized, to show perfect parts of their lives online. That kind of perfection is impossible, and it makes them feel constantly judged.</p>
+                
+                <h2 class="text-3xl">Academic Fallout and Dissonance</h2>
+                <p>It’s not just emotional pressure; it’s academic, too. When students are trying to study or focus, their phone can pull them away in seconds. They can be sitting in a lecture hall, but mentally somewhere else, scrolling through notifications or checking if someone texted back. The ability to concentrate is like a muscle, and social media keeps weakening it by offering constant temptation. Notifications like comments and messages may seem small, but together they create an environment that pulls attention away from what really matters.</p>
+                <p>Studies have shown this clearly. According to Sun (2023), there is a direct link between social media use and feelings of social anxiety and loneliness. It’s a cruel paradox: students use these platforms to feel connected, but often end up feeling even more disconnected. The apps themselves are designed to keep people scrolling, reacting, and comparing. They are made for engagement; every single notification pulls users from the present moment. Instead of helping them connect, these devices divide their attention from work and life, and for students, it affects their ability to stay focused on academics.</p>
+                
+                <div class="callout p-4 rounded-lg text-gray-200 italic">
+                    <p>Josephine (2016) calls this the “digital dissonance,” a painful separation between apps used for fun and apps used for school. It’s hard to keep them separate because, as Josephine found, social life feels like pleasure while schoolwork feels like pain.</p>
+                </div>
+                
+                <p>When teachers started bringing social media into classrooms, the situation worsened. They introduced something meant for entertainment into a space meant for focus, creating constant clashes. It’s like trying to study in a room where everyone is talking.</p>
+                <p>Social media posts often pull focus away from learning, and although they may seem useful in classrooms, they usually bring more distraction than value. Social media also influences how students perceive themselves in academic settings. Memes and jokes about majors or grades, for example, may seem harmless, but they create stereotypes that shape how students view their own worth. One post or comment can stick in a student’s head longer than any positive feedback. Bermuda et al. (2023) found that small negative moments, like comparison or online judgment, stay in our minds longer than small positive ones, like receiving likes or compliments. Those repeated hits to self-esteem make students feel insecure about their studies and their school place.</p>
+                
+                <h2 class="text-3xl">The Potential Cure: Technology as the Solution</h2>
+                <p>At the same time, social media helps people connect broadly, though not always deeply. It makes it easy to reach a hundred people, but those connections can feel shallow. What once felt like a bond starts feeling like a chore, as students check messages and stories not out of interest but out of habit. The good news, though, is that technology itself can be part of the solution. Sun (2023) found that mindfulness-based mobile apps can significantly reduce social anxiety and loneliness among students. This finding is huge because it proves the problem isn’t the screen; it’s the design.</p>
+                <p>Recognizing this potential of social media it can help students network in meaningful ways. Especially for students living in dorms, social media can be a lifeline to loved ones. It connects them with clubs, campus events, and communities. So the issue isn’t whether social media allows connection; it’s whether those app designs are healthy and allow connections that are fit and balanced without affecting the student's life.</p>
+
+                <div class="fig-placeholder p-6 mt-8 mb-8 flex flex-col justify-center items-center text-center">
+    <!-- Add your image here (choose your image link for src) -->
+    <img 
+      src="Images/pls.jpg" 
+      alt="PLS Model Illustration" 
+      class="mb-4 rounded-lg shadow-lg max-w-full h-auto" 
+      style="max-height:220px;"
+    />
+
+    <p class="text-xl font-bold text-gray-200 mt-4">Figure 1: PLS Structural Model</p>
+    <p class="text-sm text-gray-400 mt-2">Conceptual model illustrating how work-related social media usage positively affects engagement and the consequential impact on academic focus.</p>
+    <p class="text-xs text-gray-500 mt-2">Adapted from Sun, Yiyang. “Mindfulness Apps and Student Well-being in the Digital Age.”</p>
+</div>
+
+                <p>When technology is made to encourage being present in reality instead of a counterproductive reaction and comparison, it can be a powerful support for students' mental health. It is not about getting rid of screens completely but about learning to use them in a better way. Students who do well in school and life do more than just control screen time. They take back their attention. Teachers can help too. Instead of using social media to keep students interested, they should help students focus on what is in front of them and give lessons that reduce distractions.</p>
+                
+                <h2 class="text-3xl">Conclusion: The Path Forward</h2>
+                <p>Overall, social media has transformed what it means to be a student. It influences not just academic performance but also mental health and self-perception. The reason is clear: the way these applications are designed can lead to fatigue, anxiety, and weakened focus. As a result, we have a generation of students who are constantly connected online but rarely fully present in the real world.</p>
+                <p>Technology doesn’t have to be the enemy, though. When designed with mindfulness and purpose, it can actually help students reconnect with themselves and their goals. But until then, social media remains both the problem and the potential cure. The challenge for students now is to stop letting social media use them and start learning how to use it consciously so they can turn it from a source of stress into something that supports their learning and well-being.</p>
+            </div>
+            <div class="flex justify-center pt-8">
+                <button class="interactive-btn font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg" onclick="showPage('post-quiz-page')">Final Test: Assess Your Comprehension →</button>
+            </div>
+        </section>
+
+
+        <section id="post-quiz-page" class="page-content hidden-page space-y-8">
+            <h1 class="text-4xl font-extrabold text-indigo-400 mb-6 border-b-2 border-slate-700 pb-3 major-title sm:text-5xl">Post-Test: Comprehension Check</h1>
+            <p class="text-lg text-gray-300">Now that you've read the essay, test your knowledge on the key concepts of the student digital dilemma. You must score 3/3 to pass!</p>
+            
+            <div class="bg-slate-800 p-8 rounded-xl shadow-lg border border-slate-700">
+                <form id="postQuizForm" class="space-y-6">
+                    <div class="p-4 border border-slate-700 rounded-lg bg-slate-900 hover:border-indigo-400 transition duration-200">
+                        <p class="font-semibold text-white mb-2">1. According to the essay, what is the core conflict social media creates for students?</p>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="q1" value="a" class="mr-2 accent-indigo-500"> A) The difficulty of paying for subscriptions.</label>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="q1" value="b" class="mr-2 accent-indigo-500"> B) The constant choice between their private life and their student self.</label>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="q1" value="c" class="mr-2 accent-indigo-500"> C) The struggle to find relevant study groups.</label>
+                    </div>
+
+                    <div class="p-4 border border-slate-700 rounded-lg bg-slate-900 hover:border-indigo-400 transition duration-200">
+                        <p class="font-semibold text-white mb-2">2. What term does Josephine (2016) use to describe the painful separation between apps used for fun and apps used for school?</p>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="q2" value="a" class="mr-2 accent-indigo-500"> A) Attention Fragmentation</label>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="q2" value="b" class="mr-2 accent-indigo-500"> B) Cognitive Load</label>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="q2" value="c" class="mr-2 accent-indigo-500"> C) Digital Dissonance</label>
+                    </div>
+                    
+                    <div class="p-4 border border-slate-700 rounded-lg bg-slate-900 hover:border-indigo-400 transition duration-200">
+                        <p class="font-semibold text-white mb-2">3. According to Sun (2023), what specific technology was found to significantly reduce social anxiety and loneliness among students?</p>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="q3" value="a" class="mr-2 accent-indigo-500"> A) Virtual Reality (VR) chatrooms.</label>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="q3" value="b" class="mr-2 accent-indigo-500"> B) Mindfulness-based mobile apps.</label>
+                        <label class="block text-gray-300 hover:text-white cursor-pointer p-2"><input type="radio" name="q3" value="c" class="mr-2 accent-indigo-500"> C) Academic collaboration platforms.</label>
+                    </div>
+
+                    <button type="button" class="interactive-btn font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg w-full" onclick="checkPostQuiz()">Submit Post-Test</button>
+                </form>
+                <div id="post-quiz-results" class="hidden"></div>
+            </div>
+        </section>
+
+        <section id="credits-page" class="page-content hidden-page space-y-8">
+            <h1 class="text-4xl font-extrabold text-indigo-400 mb-6 border-b-2 border-slate-700 pb-3 major-title sm:text-5xl">Credits & Works Cited 📚</h1>
+            <p class="text-lg text-gray-300">This project is based on a synthesis of academic research concerning social media use and student well-being.</p>
+            
+            <div class="bg-slate-800 p-8 rounded-xl shadow-lg border border-slate-700">
+                <h2 class="text-2xl font-semibold text-white mb-4 border-b border-slate-700 pb-2">Academic Sources</h2>
+                <ul class="list-disc list-inside space-y-4 ml-4 text-gray-300">
+                    <li>Bermuda, S., Copley, F., & Al-Sharif, M. (2023). The Enduring Effect of Online Judgment on Student Self-Perception. Journal of Digital Wellness, 12(3), 45-61.</li>
+                    <li>Josephine, R. (2016). Digital Dissonance: The Separation of Pleasure and Pain in Student App Use. Educational Technology Quarterly, 88(1), 101-115.</li>
+                    <li>Sun, Yiyang. (2023). Mindfulness Apps and Student Well-being in the Digital Age: A Quasi-Experimental Study. Computers & Education, 192, 104668.</li>
+                    <li>Video Placeholder:https://www.youtube.com/embed/4TMPXK9tw5U?si=-5eIa_oiiGpAaQ0j</li>
+                </ul>
+            </div>
+
+            <div class="bg-slate-800 p-8 rounded-xl shadow-lg border border-slate-700">
+                <h2 class="text-2xl font-semibold text-white mb-4 border-b border-slate-700 pb-2">Technical Credits</h2>
+                <ul class="list-disc list-inside space-y-2 ml-4 text-gray-300">
+                    <li>Styling Framework: Tailwind CSS (via CDN)</li>
+                    <li>Theme: Dark Royal Blue (Custom CSS Variables)</li>
+                    <li>Concept & Interactivity: Designed to simulate the distraction cycle.</li>
+                </ul>
+            </div>
+        </section>
+
+    </main>
+
+</body>
+</html>
